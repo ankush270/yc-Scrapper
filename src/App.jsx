@@ -21,12 +21,22 @@ import { getAllFavorites, getSetting, setSetting } from './lib/storage';
 import { trackUserAction } from './lib/achievements';
 import { subscribeToAuth, getAuthHeader } from './lib/firebase';
 import LandingPage from './components/LandingPage';
+import PublicTeardownView from './components/PublicTeardownView';
 
 gsap.registerPlugin(useGSAP);
 
 export default function App() {
+  const [teardownId, setTeardownId] = useState(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#teardown/')) {
+      return hash.replace('#teardown/', '');
+    }
+    return null;
+  });
+
   const [currentView, setCurrentView] = useState(() => {
     const hash = window.location.hash;
+    if (hash.startsWith('#teardown/')) return 'teardown';
     if (hash === '#app') return 'app';
     return 'landing';
   });
@@ -215,7 +225,10 @@ export default function App() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash;
-      if (hash === '#app') {
+      if (hash.startsWith('#teardown/')) {
+        setTeardownId(hash.replace('#teardown/', ''));
+        setCurrentView('teardown');
+      } else if (hash === '#app') {
         setCurrentView('app');
       } else {
         setCurrentView('landing');
@@ -500,6 +513,10 @@ export default function App() {
 
   if (currentView === 'landing') {
     return <LandingPage onStart={() => { window.location.hash = 'app'; }} />;
+  }
+
+  if (currentView === 'teardown') {
+    return <PublicTeardownView teardownId={teardownId} onBackToLanding={() => { window.location.hash = 'landing'; }} />;
   }
 
   return (
