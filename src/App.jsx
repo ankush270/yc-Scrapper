@@ -24,6 +24,7 @@ import LandingPage from './components/LandingPage';
 import PublicTeardownView from './components/PublicTeardownView';
 import StreakCounter from './components/StreakCounter';
 import Leaderboard from './components/Leaderboard';
+import DNACardDeck from './components/DNACardDeck';
 
 gsap.registerPlugin(useGSAP);
 
@@ -702,6 +703,16 @@ export default function App() {
           >
             🏆 ARENA_LEADERBOARD
           </button>
+          <button
+            onClick={() => setActiveTab('deck')}
+            className={`font-mono-tech text-xs px-4 py-2 border-2 border-black cursor-pointer rounded transition-all uppercase tracking-wider ${
+              activeTab === 'deck'
+                ? 'bg-neon-cyan text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] font-bold -translate-x-[1px] -translate-y-[1px]'
+                : 'bg-white text-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-[1px] hover:-translate-y-[1px] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[0px_0px_0px_0px_rgba(0,0,0,1)]'
+            }`}
+          >
+            🧬 TRADING_DECK
+          </button>
         </div>
 
         {/* Tab Content Panels */}
@@ -799,6 +810,14 @@ export default function App() {
           ) : activeTab === 'leaderboard' ? (
             <div className="w-full">
               <Leaderboard />
+            </div>
+          ) : activeTab === 'deck' ? (
+            <div className="w-full">
+              <DNACardDeck
+                allCompanies={companies}
+                favoriteIds={favoriteIds}
+                userNotes={userNotes}
+              />
             </div>
           ) : null}
         </div>
