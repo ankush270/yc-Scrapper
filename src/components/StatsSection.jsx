@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { Database, Zap, Trophy, Tag, RotateCcw } from 'lucide-react';
@@ -61,9 +61,8 @@ export default function StatsSection({
       value: totalCount,
       ref: totalRef,
       icon: Database,
-      textColor: 'text-neon-cyan',
-      borderClass: 'border-slate-800 hover:border-neon-cyan/60 hover:shadow-[0_0_15px_rgba(0,210,255,0.15)]',
-      bgGlow: 'rgba(0, 210, 255, 0.03)',
+      textColor: 'text-black',
+      borderClass: 'border-black bg-white hover:bg-neon-cyan/20 hover:shadow-[4.5px_4.5px_0px_0px_#000000] hover:-translate-x-[1.5px] hover:-translate-y-[1.5px] shadow-[3px_3px_0px_0px_#000000]',
       onClick: resetFilters,
       isActive: false,
       title: 'Click to reset all filters'
@@ -74,11 +73,10 @@ export default function StatsSection({
       value: activeCount,
       ref: activeRef,
       icon: Zap,
-      textColor: 'text-neon-emerald',
+      textColor: 'text-black',
       borderClass: selectedStatus === 'Active'
-        ? 'border-neon-emerald shadow-[0_0_15px_rgba(0,255,157,0.25)] bg-neon-emerald/10'
-        : 'border-slate-800 hover:border-neon-emerald/60 hover:shadow-[0_0_15px_rgba(0,255,157,0.15)]',
-      bgGlow: selectedStatus === 'Active' ? 'rgba(0, 255, 157, 0.08)' : 'rgba(0, 255, 157, 0.03)',
+        ? 'border-black bg-neon-emerald shadow-[3px_3px_0px_0px_#000000] -translate-x-[1px] -translate-y-[1px]'
+        : 'border-black bg-white hover:bg-neon-emerald/20 hover:shadow-[4.5px_4.5px_0px_0px_#000000] hover:-translate-x-[1.5px] hover:-translate-y-[1.5px] shadow-[3px_3px_0px_0px_#000000]',
       onClick: () => setSelectedStatus(selectedStatus === 'Active' ? 'All' : 'Active'),
       isActive: selectedStatus === 'Active',
       title: selectedStatus === 'Active' ? 'Click to show all operating statuses' : 'Click to filter for active startups'
@@ -89,11 +87,10 @@ export default function StatsSection({
       value: topCount,
       ref: topRef,
       icon: Trophy,
-      textColor: 'text-neon-magenta',
+      textColor: 'text-black',
       borderClass: onlyTop
-        ? 'border-neon-magenta shadow-[0_0_15px_rgba(255,0,127,0.25)] bg-neon-magenta/10'
-        : 'border-slate-800 hover:border-neon-magenta/60 hover:shadow-[0_0_15px_rgba(255,0,127,0.15)]',
-      bgGlow: onlyTop ? 'rgba(255, 0, 127, 0.08)' : 'rgba(255, 0, 127, 0.03)',
+        ? 'border-black bg-neon-magenta shadow-[3px_3px_0px_0px_#000000] -translate-x-[1px] -translate-y-[1px] text-white'
+        : 'border-black bg-white hover:bg-neon-magenta/20 hover:shadow-[4.5px_4.5px_0px_0px_#000000] hover:-translate-x-[1.5px] hover:-translate-y-[1.5px] shadow-[3px_3px_0px_0px_#000000]',
       onClick: () => setOnlyTop(!onlyTop),
       isActive: onlyTop,
       title: onlyTop ? 'Click to show all startups' : 'Click to filter for Top YC companies'
@@ -104,11 +101,10 @@ export default function StatsSection({
       value: batchCount,
       ref: batchRef,
       icon: Tag,
-      textColor: 'text-neon-orange',
+      textColor: 'text-black',
       borderClass: selectedBatch !== 'All'
-        ? 'border-neon-orange shadow-[0_0_15px_rgba(255,170,0,0.25)] bg-neon-orange/10'
-        : 'border-slate-800 hover:border-neon-orange/60 hover:shadow-[0_0_15px_rgba(255,170,0,0.15)]',
-      bgGlow: selectedBatch !== 'All' ? 'rgba(255, 170, 0, 0.08)' : 'rgba(255, 170, 0, 0.03)',
+        ? 'border-black bg-neon-orange shadow-[3px_3px_0px_0px_#000000] -translate-x-[1px] -translate-y-[1px] text-white'
+        : 'border-black bg-white hover:bg-neon-orange/20 hover:shadow-[4.5px_4.5px_0px_0px_#000000] hover:-translate-x-[1.5px] hover:-translate-y-[1.5px] shadow-[3px_3px_0px_0px_#000000]',
       onClick: () => {
         if (selectedBatch !== 'All') {
           setSelectedBatch('All');
@@ -128,49 +124,43 @@ export default function StatsSection({
             key={card.id}
             onClick={card.onClick}
             title={card.title}
-            className={`glass-panel p-4 rounded-xl border transition-all duration-300 relative overflow-hidden group cursor-pointer ${card.borderClass}`}
-            style={{ backgroundColor: card.bgGlow }}
+            className={`p-4 border-2.5 transition-all duration-150 relative overflow-hidden group cursor-pointer rounded ${card.borderClass}`}
           >
-            {/* Corner Decorative Tech Lines */}
-            <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-slate-700 group-hover:border-neon-cyan transition-colors"></div>
-            <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-slate-700 group-hover:border-neon-cyan transition-colors"></div>
-            <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-slate-700 group-hover:border-neon-cyan transition-colors"></div>
-            <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-slate-700 group-hover:border-neon-cyan transition-colors"></div>
-
             <div className="flex justify-between items-start mb-2">
-              <span className="text-[10px] tracking-wider text-slate-400 font-mono-tech uppercase">
+              <span className={`text-[10px] tracking-wider font-mono-tech uppercase font-bold ${
+                card.isActive ? 'text-black' : 'text-slate-700'
+              }`}>
                 {card.label}
               </span>
               <div className="flex items-center space-x-1.5">
                 {card.isActive && (
-                  <span className={`w-1.5 h-1.5 rounded-full bg-current ${card.textColor} animate-pulse`} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
                 )}
                 {card.id === 'total' && (
-                  <RotateCcw className="w-3 h-3 text-slate-500 group-hover:text-neon-cyan transition-colors" />
+                  <RotateCcw className="w-3 h-3 text-slate-600 group-hover:text-black transition-colors" />
                 )}
-                <IconComponent className={`w-4 h-4 ${card.textColor} opacity-80`} />
+                <IconComponent className="w-4 h-4 opacity-90" />
               </div>
             </div>
 
             <div className="flex items-baseline">
               <span
                 ref={card.ref}
-                className="text-2xl md:text-3xl font-mono-tech font-bold text-white tracking-tight"
+                className="text-2xl md:text-3xl font-mono-tech font-bold text-black tracking-tight"
               >
                 0
               </span>
-              <span className="text-xs text-slate-400 font-mono-tech ml-1">
+              <span className={`text-xs font-mono-tech ml-1 font-bold ${
+                card.isActive ? 'text-black/70' : 'text-slate-600'
+              }`}>
                 / {allCompanies.length.toLocaleString()}
               </span>
             </div>
             
             {/* Click call-to-action hints */}
-            <div className="absolute bottom-1 right-2 font-mono-code text-[8px] text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute bottom-1 right-2 font-mono-code text-[8px] text-black font-bold opacity-0 group-hover:opacity-100 transition-opacity">
               {card.id === 'total' ? '[RESET]' : card.isActive ? '[CLEAR]' : '[FILTER]'}
             </div>
-
-            {/* Tech grid dots background element */}
-            <div className="absolute bottom-0 right-0 w-16 h-12 opacity-5 pointer-events-none bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:8px_8px] mask-gradient-to-l"></div>
           </div>
         );
       })}

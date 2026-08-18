@@ -3,7 +3,7 @@ import LandingHero from './LandingHero';
 import { 
   Terminal, Sparkles, Cpu, Layers, BookOpen, 
   ArrowRight, Shield, Award, Check, ChevronDown, HelpCircle, 
-  Heart, Zap, Star, GitFork, Trash2 
+  Heart, Zap, Star, GitFork, Trash2, Flame
 } from 'lucide-react';
 
 export default function LandingPage({ onStart }) {

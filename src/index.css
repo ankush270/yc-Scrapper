@@ -2,14 +2,16 @@
 @import "tailwindcss";
 
 @theme {
-  --color-obsidian-bg: #070a13;
-  --color-obsidian-dark: #04060b;
-  --color-space-card: #0e1626;
-  --color-space-card-hover: #152238;
-  --color-neon-emerald: #00ff9d;
-  --color-neon-cyan: #00d2ff;
-  --color-neon-magenta: #ff007f;
-  --color-neon-orange: #ffaa00;
+  --color-obsidian-bg: #FAF6EE;
+  --color-obsidian-dark: #EBE7DE;
+  --color-space-card: #FFFFFF;
+  --color-space-card-hover: #FFFFFF;
+  
+  --color-neon-emerald: #00d37e; /* brutalist solid emerald */
+  --color-neon-cyan: #00bce6;    /* brutalist solid cyan */
+  --color-neon-magenta: #e60073; /* brutalist solid magenta */
+  --color-neon-orange: #ff7700;  /* brutalist solid orange */
+  
   --font-mono-tech: 'Share Tech Mono', monospace;
   --font-mono-code: 'JetBrains Mono', monospace;
   --font-sans-body: 'Plus Jakarta Sans', sans-serif;
@@ -18,89 +20,130 @@
 @layer base {
   body {
     background-color: var(--color-obsidian-bg);
-    color: #e2e8f0;
+    background-image: radial-gradient(rgba(0, 0, 0, 0.08) 1.5px, transparent 1.5px);
+    background-size: 24px 24px;
+    color: #1a1a1a;
     font-family: var(--font-sans-body);
     overflow-x: hidden;
   }
 }
 
-/* Custom Cyberpunk Utilities */
-.cyber-glow-emerald {
-  box-shadow: 0 0 15px rgba(0, 255, 157, 0.15);
-  border: 1px solid rgba(0, 255, 157, 0.25);
+/* Neo-Brutalist Utilities */
+.brutal-card {
+  background-color: #FFFFFF !important;
+  border: 2.5px solid #000000 !important;
+  box-shadow: 4px 4px 0px 0px #000000 !important;
+  border-radius: 4px !important;
+  color: #000000 !important;
 }
 
-.cyber-glow-emerald-hover:hover {
-  box-shadow: 0 0 20px rgba(0, 255, 157, 0.35);
-  border-color: rgba(0, 255, 157, 0.7);
-  transform: translateY(-2px);
+.brutal-card-hover {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
-.cyber-glow-cyan {
-  box-shadow: 0 0 15px rgba(0, 210, 255, 0.15);
-  border: 1px solid rgba(0, 210, 255, 0.25);
+.brutal-card-hover:hover {
+  transform: translate(-3px, -3px) !important;
+  box-shadow: 7px 7px 0px 0px #000000 !important;
 }
 
-.cyber-glow-cyan-hover:hover {
-  box-shadow: 0 0 20px rgba(0, 210, 255, 0.35);
-  border-color: rgba(0, 210, 255, 0.7);
+.brutal-card-selected {
+  transform: translate(-2px, -2px) !important;
+  box-shadow: 6px 6px 0px 0px #000000 !important;
+  background-color: #FFFDE6 !important;
 }
 
-.cyber-glow-magenta {
-  box-shadow: 0 0 15px rgba(255, 0, 127, 0.15);
-  border: 1px solid rgba(255, 0, 127, 0.25);
+.brutal-btn {
+  background-color: #FFFFFF !important;
+  border: 2.5px solid #000000 !important;
+  color: #000000 !important;
+  box-shadow: 3px 3px 0px 0px #000000 !important;
+  font-weight: 700;
+  border-radius: 4px !important;
+  transition: transform 0.1s, box-shadow 0.1s;
+  cursor: pointer;
 }
 
-/* Terminal Scanline Texture overlay */
-.terminal-scanlines {
-  position: relative;
-  overflow: hidden;
+.brutal-btn:hover {
+  transform: translate(-1.5px, -1.5px) !important;
+  box-shadow: 4.5px 4.5px 0px 0px #000000 !important;
 }
 
-.terminal-scanlines::before {
-  content: " ";
-  display: block;
-  position: absolute;
-  top: 0; left: 0; bottom: 0; right: 0;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-  z-index: 10;
-  background-size: 100% 4px, 6px 100%;
+.brutal-btn:active {
+  transform: translate(1.5px, 1.5px) !important;
+  box-shadow: 1px 1px 0px 0px #000000 !important;
+}
+
+.brutal-btn:disabled {
+  opacity: 0.4;
   pointer-events: none;
+  box-shadow: 1px 1px 0px 0px #000000 !important;
+  transform: translate(1.5px, 1.5px) !important;
 }
 
-/* Retro CRT monitor flickering and blink */
-@keyframes blink {
-  0%, 49% { opacity: 1; }
-  50%, 100% { opacity: 0; }
+.brutal-btn-emerald {
+  background-color: var(--color-neon-emerald) !important;
 }
 
-.cursor-blink {
-  animation: blink 1s infinite;
+.brutal-btn-cyan {
+  background-color: var(--color-neon-cyan) !important;
 }
 
-/* Custom Thin Neon Scrollbars */
+.brutal-btn-magenta {
+  background-color: var(--color-neon-magenta) !important;
+  color: #FFFFFF !important;
+}
+
+.brutal-btn-orange {
+  background-color: var(--color-neon-orange) !important;
+  color: #FFFFFF !important;
+}
+
+.brutal-input {
+  background-color: #FFFFFF !important;
+  border: 2.5px solid #000000 !important;
+  color: #000000 !important;
+  border-radius: 4px !important;
+  box-shadow: 2px 2px 0px 0px #000000 !important;
+}
+
+.brutal-input:focus {
+  outline: none;
+  box-shadow: 4px 4px 0px 0px #000000 !important;
+}
+
+.brutal-badge {
+  background-color: #FFFFFF !important;
+  border: 1.5px solid #000000 !important;
+  color: #000000 !important;
+  border-radius: 4px !important;
+  box-shadow: 1.5px 1.5px 0px 0px #000000 !important;
+  font-weight: 600;
+}
+
+/* Thin brutal scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
   background: var(--color-obsidian-bg);
+  border-left: 2px solid #000000;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 3px;
+  background: #000000;
+  border: 2px solid var(--color-obsidian-bg);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-neon-cyan);
-  box-shadow: 0 0 10px var(--color-neon-cyan);
+  background: #2b2b2b;
 }
 
-/* Glassmorphism panel styling */
-.glass-panel {
-  background: rgba(15, 23, 42, 0.65);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+/* Halftone style dots */
+.halftone-dots {
+  background-image: radial-gradient(#000000 1.5px, transparent 1.5px);
+  background-size: 8px 8px;
+  opacity: 0.05;
 }
