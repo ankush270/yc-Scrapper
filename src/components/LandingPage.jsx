@@ -16,7 +16,7 @@ export default function LandingPage({ onStart }) {
   const features = [
     {
       icon: <Terminal className="w-6 h-6 text-neon-cyan" />,
-      title: "6,100+ Startup Database",
+      title: "6,179 Startup Database",
       desc: "Explore details, sectors, regions, status, and history of YC-funded companies since 2005."
     },
     {
@@ -43,6 +43,36 @@ export default function LandingPage({ onStart }) {
       icon: <GitFork className="w-6 h-6 text-neon-cyan" />,
       title: "Builder Sandbox",
       desc: "Plan your own products, track features, link inspiration from YC startups, and fork/remix community proposals."
+    },
+    {
+      icon: <Award className="w-6 h-6 text-neon-orange" />,
+      title: "Weekly Arena Challenges",
+      desc: "Participate in 'How Would You Build This?' architecture challenges, submit diagrams, and get rated by the community."
+    },
+    {
+      icon: <Flame className="w-6 h-6 text-neon-magenta" />,
+      title: "Daily Streaks & Leaderboard",
+      desc: "Gamified learning check-ins. Accumulate experience points (XP) for viewing startups, writing notes, and ranking in the Arena."
+    },
+    {
+      icon: <BookOpen className="w-6 h-6 text-neon-emerald" />,
+      title: "Learning Paths & Certificates",
+      desc: "Structured upskilling tracks (SaaS 101, zero to MVP, Fintech). Earn downloadable credentials to display on LinkedIn."
+    },
+    {
+      icon: <Star className="w-6 h-6 text-neon-cyan" />,
+      title: "Revenue Reverse-Engineer",
+      desc: "Deconstruct monetization strategies. View user fee ratios, transaction models, subscription logic, and price tiers."
+    },
+    {
+      icon: <HelpCircle className="w-6 h-6 text-neon-orange" />,
+      title: "Startup Simulator",
+      desc: "Interactive what-if scenario spreadsheet. Tweak conversion, churn, and pricing to simulate product growth."
+    },
+    {
+      icon: <Shield className="w-6 h-6 text-neon-magenta" />,
+      title: "Founder GTM Playbook",
+      desc: "AI generated day-by-day launching blueprints. Plan customer discovery, first 100 users, and scaling channels."
     }
   ];
 
@@ -152,6 +182,103 @@ export default function LandingPage({ onStart }) {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* How to Use Section */}
+      <section className="py-20 border-t-2 border-black bg-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-16">
+            <span className="font-mono-code text-xs bg-neon-magenta border-2 border-black text-white px-3 py-1 rounded font-bold uppercase shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)]">
+              Workflow Guide
+            </span>
+            <h2 className="font-mono-tech text-3xl md:text-4xl font-extrabold mt-6 uppercase tracking-wider text-black">
+              How To Use YC_DECODE
+            </h2>
+            <p className="text-sm text-slate-800 mt-2 max-w-xl mx-auto font-mono-code">
+              A step-by-step roadmap to study system design and validate your startup ideas.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Step 1 */}
+            <div className="brutal-card p-6 bg-white relative pt-12 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <span className="absolute top-4 left-4 font-mono-tech text-3xl font-black text-neon-orange">
+                01
+              </span>
+              <h3 className="font-mono-tech text-base font-bold uppercase text-black mb-2 mt-2">
+                Inspect & Explore
+              </h3>
+              <p className="text-xs text-slate-700 leading-relaxed font-sans">
+                Browse our grid of 6,179 startups. Filter by batch, industry, status, or search fuzzy keywords to identify market clusters and business trends.
+              </p>
+            </div>
+
+            {/* Step 2 */}
+            <div className="brutal-card p-6 bg-white relative pt-12 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <span className="absolute top-4 left-4 font-mono-tech text-3xl font-black text-neon-cyan">
+                02
+              </span>
+              <h3 className="font-mono-tech text-base font-bold uppercase text-black mb-2 mt-2">
+                Deconstruct with AI
+              </h3>
+              <p className="text-xs text-slate-700 leading-relaxed font-sans">
+                Run AI analysis teardowns to map problem statements, core value props, and target audiences. Use the AI Roast Engine for brutally honest feedback on your own concepts.
+              </p>
+            </div>
+
+            {/* Step 3 */}
+            <div className="brutal-card p-6 bg-white relative pt-12 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <span className="absolute top-4 left-4 font-mono-tech text-3xl font-black text-neon-emerald">
+                03
+              </span>
+              <h3 className="font-mono-tech text-base font-bold uppercase text-black mb-2 mt-2">
+                Study System Design
+              </h3>
+              <p className="text-xs text-slate-700 leading-relaxed font-sans">
+                Inspect database schemas, REST endpoints, and system architecture. Render Mermaid diagrams to visual maps, and guess tech stack DNA (React, Python, Go) deterministically.
+              </p>
+            </div>
+
+            {/* Step 4 */}
+            <div className="brutal-card p-6 bg-white relative pt-12 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <span className="absolute top-4 left-4 font-mono-tech text-3xl font-black text-neon-magenta">
+                04
+              </span>
+              <h3 className="font-mono-tech text-base font-bold uppercase text-black mb-2 mt-2">
+                Complete Challenges
+              </h3>
+              <p className="text-xs text-slate-700 leading-relaxed font-sans">
+                Solve weekly 'How Would You Build This?' architecture challenges. Maintain your daily check-in streak and rank on the Arena Leaderboard to earn points.
+              </p>
+            </div>
+
+            {/* Step 5 */}
+            <div className="brutal-card p-6 bg-white relative pt-12 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <span className="absolute top-4 left-4 font-mono-tech text-3xl font-black text-slate-800">
+                05
+              </span>
+              <h3 className="font-mono-tech text-base font-bold uppercase text-black mb-2 mt-2">
+                Simulate & Plan
+              </h3>
+              <p className="text-xs text-slate-700 leading-relaxed font-sans">
+                Open the Sandbox Kanban workspace to structure your MVP roadmap. Tweak users, pricing, and churn ratios in the Startup Simulator to project runway and margins.
+              </p>
+            </div>
+
+            {/* Step 6 */}
+            <div className="brutal-card p-6 bg-white relative pt-12 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <span className="absolute top-4 left-4 font-mono-tech text-3xl font-black text-neon-cyan">
+                06
+              </span>
+              <h3 className="font-mono-tech text-base font-bold uppercase text-black mb-2 mt-2">
+                Export & Showcase
+              </h3>
+              <p className="text-xs text-slate-700 leading-relaxed font-sans">
+                Download high-quality vector SVG trading cards of startups you deconstruct. Publish read-only teardowns, claim learning certificates, and share milestones with colleagues on LinkedIn.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
