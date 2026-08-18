@@ -145,6 +145,15 @@ class PublicTeardown(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class Streak(Base):
+    __tablename__ = "streaks"
+    id = Column(Integer, primary_key=True, index=True)
+    user_uid = Column(String(255), unique=True, nullable=False, index=True)
+    streak_count = Column(Integer, default=0)
+    last_check_in = Column(String(10), nullable=True) # YYYY-MM-DD
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 # Helper function to initialize database tables
 def init_db():
     logger.info("Initializing database schema...")

@@ -22,6 +22,7 @@ import { trackUserAction } from './lib/achievements';
 import { subscribeToAuth, getAuthHeader } from './lib/firebase';
 import LandingPage from './components/LandingPage';
 import PublicTeardownView from './components/PublicTeardownView';
+import StreakCounter from './components/StreakCounter';
 
 gsap.registerPlugin(useGSAP);
 
@@ -611,6 +612,8 @@ export default function App() {
               <Settings className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Settings</span>
             </button>
+
+            <StreakCounter />
 
             <AuthBar onOpenProfile={() => setProfileOpen(true)} />
 

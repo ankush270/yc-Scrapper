@@ -11,7 +11,8 @@ from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 
 import uuid
-from db import init_db, get_db, User, Note, Favorite, Collection, SandboxProject, Achievement, UsageStat, PublicTeardown
+from datetime import datetime, timedelta
+from db import init_db, get_db, User, Note, Favorite, Collection, SandboxProject, Achievement, UsageStat, PublicTeardown, Streak
 from llm import llm_service
 
 # Configure logging
@@ -616,3 +617,61 @@ def get_public_teardown(teardown_id: str, db: Session = Depends(get_db)):
         "unlockedBadgesCount": teardown.unlocked_badges_count,
         "createdAt": int(teardown.created_at.timestamp() * 1000)
     }
+
+
+# --- Streaks ---
+@app.get("/api/streaks")
+def get_user_streak(uid: str = Depends(get_current_user_uid), db: Session = Depends(get_db)):
+    streak = db.query(Streak).filter(Streak.user_uid == uid).first()
+    if not streak:
+        return {"streak": 0, "lastCheckIn": None}
+    
+    # Check if streak has expired (older than yesterday)
+    today_str = datetime.utcnow().strftime("%Y-%m-%d")
+    yesterday_str = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d")
+    
+    if streak.last_check_in and streak.last_check_in != today_str and streak.last_check_in != yesterday_str:
+        # Reset expired streak
+        streak.streak_count = 0
+        db.commit()
+        db.refresh(streak)
+        
+    return {"streak": streak.streak_count, "lastCheckIn": streak.last_check_in}
+
+
+@app.post("/api/streaks/check-in")
+def check_in_streak(uid: str = Depends(get_current_user_uid), db: Session = Depends(get_db)):
+    today_str = datetime.utcnow().strftime("%Y-%m-%d")
+    yesterday_str = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d")
+    
+    # Ensure user exists
+    user = db.query(User).filter(User.uid == uid).first()
+    if not user:
+        user = User(uid=uid)
+        db.add(user)
+        db.commit()
+        
+    streak = db.query(Streak).filter(Streak.user_uid == uid).first()
+    if not streak:
+        streak = Streak(
+            user_uid=uid,
+            streak_count=1,
+            last_check_in=today_str
+        )
+        db.add(streak)
+    else:
+        if streak.last_check_in == today_str:
+            # Already checked in today
+            pass
+        elif streak.last_check_in == yesterday_str:
+            # Checked in yesterday, increment
+            streak.streak_count += 1
+            streak.last_check_in = today_str
+        else:
+            # Missed a day or first check-in
+            streak.streak_count = 1
+            streak.last_check_in = today_str
+            
+    db.commit()
+    db.refresh(streak)
+    return {"streak": streak.streak_count, "lastCheckIn": streak.last_check_in}

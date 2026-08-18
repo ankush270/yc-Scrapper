@@ -1,7 +1,7 @@
 import unittest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from db import Base, PublicTeardown
+from db import Base, PublicTeardown, Streak
 import uuid
 
 class TestPublicTeardowns(unittest.TestCase):
@@ -51,6 +51,30 @@ class TestPublicTeardowns(unittest.TestCase):
         self.assertEqual(retrieved.teardown_content, "### 1. Problem Statement\nWidgets are static. AI widgets are dynamic.")
         self.assertEqual(retrieved.user_display_name, "Developer Bob")
         self.assertEqual(retrieved.unlocked_badges_count, 3)
+
+    def test_streak_check_in(self):
+        user_uid = "streak_user_456"
+        
+        # 1. Create initial streak
+        streak = Streak(user_uid=user_uid, streak_count=1, last_check_in="2026-08-18")
+        self.db.add(streak)
+        self.db.commit()
+
+        # 2. Get and assert initial streak
+        retrieved = self.db.query(Streak).filter(Streak.user_uid == user_uid).first()
+        self.assertIsNotNone(retrieved)
+        self.assertEqual(retrieved.streak_count, 1)
+        self.assertEqual(retrieved.last_check_in, "2026-08-18")
+
+        # 3. Simulate check-in
+        retrieved.streak_count += 1
+        retrieved.last_check_in = "2026-08-19"
+        self.db.commit()
+
+        # 4. Verify updated values
+        updated = self.db.query(Streak).filter(Streak.user_uid == user_uid).first()
+        self.assertEqual(updated.streak_count, 2)
+        self.assertEqual(updated.last_check_in, "2026-08-19")
 
 if __name__ == "__main__":
     unittest.main()
