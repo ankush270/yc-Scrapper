@@ -1,15 +1,36 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { Database, Download, Upload, Terminal, Sparkles, RefreshCw } from 'lucide-react';
+import { Database, Download, Upload, Terminal, Settings } from 'lucide-react';
 import StatsSection from './components/StatsSection';
 import FiltersBar from './components/FiltersBar';
 import CompanyGrid from './components/CompanyGrid';
 import InspectorPanel from './components/InspectorPanel';
+import TrendsDashboard from './components/TrendsDashboard';
+import IdeaGapFinder from './components/IdeaGapFinder';
+import SandboxTab from './components/SandboxTab';
+import FavoritesBar from './components/FavoritesBar';
+import ComparatorPanel from './components/ComparatorPanel';
+import SettingsModal from './components/SettingsModal';
+import AuthBar from './components/AuthBar';
+import DailyChallenge from './components/DailyChallenge';
+import AchievementToast from './components/AchievementToast';
+import PublicProfile from './components/PublicProfile';
+import { fuzzySearch, getSearchSuggestions } from './lib/fuzzySearch';
+import { getAllFavorites, getSetting, setSetting } from './lib/storage';
+import { trackUserAction } from './lib/achievements';
+import { subscribeToAuth, getAuthHeader } from './lib/firebase';
+import LandingPage from './components/LandingPage';
 
 gsap.registerPlugin(useGSAP);
 
 export default function App() {
+  const [currentView, setCurrentView] = useState(() => {
+    const hash = window.location.hash;
+    if (hash === '#app') return 'app';
+    return 'landing';
+  });
+
   const [loading, setLoading] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState([]);
   const [companies, setCompanies] = useState([]);
@@ -26,6 +47,9 @@ export default function App() {
   const [onlyTop, setOnlyTop] = useState(false);
   const [onlyHasNotes, setOnlyHasNotes] = useState(false);
   
+  // View tab state
+  const [activeTab, setActiveTab] = useState('explorer');
+  
   // Paging
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -33,10 +57,32 @@ export default function App() {
   const [userNotes, setUserNotes] = useState({});
   const fileInputRef = useRef(null);
 
+  // Favorites state
+  const [favoriteIds, setFavoriteIds] = useState(new Set());
+  const [favDrawerOpen, setFavDrawerOpen] = useState(false);
+
+  // Settings modal state
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Profile modal state
+  const [profileOpen, setProfileOpen] = useState(false);
+
   // Main container ref for terminal boot reveal
   const bootOverlayRef = useRef(null);
   const bootTextRef = useRef(null);
   const mainDashboardRef = useRef(null);
+  const tabContentRef = useRef(null);
+
+  // Animate tab content transitions
+  useGSAP(() => {
+    if (tabContentRef.current) {
+      gsap.fromTo(
+        tabContentRef.current,
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out' }
+      );
+    }
+  }, { dependencies: [activeTab] });
 
   // useGSAP for contextSafe callbacks
   const { contextSafe } = useGSAP();
@@ -83,7 +129,7 @@ export default function App() {
 
     // Boot logs timeline simulation
     const bootLines = [
-      'SYS_INIT: Booting YC Idea Explorer...',
+      'SYS_INIT: Booting YC_DECODE...',
       'NET_CONNECT: Querying secure local storage...',
       `DB_SYNC: Loaded ${Object.keys(notes).length} startup study notes from local cache.`,
       'DB_FETCH: Accessing public/data/yc_companies.json...',
@@ -115,24 +161,139 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // 2. Filter & Sort Logic
-  const filteredCompanies = useMemo(() => {
-    let result = [...companies];
+  // Load favorites from IndexedDB
+  useEffect(() => {
+    getAllFavorites().then(favs => {
+      setFavoriteIds(new Set(favs.map(f => f.companyId)));
+    });
+  }, []);
 
-    // Filter text search
-    if (searchQuery.trim() !== '') {
-      const query = searchQuery.toLowerCase().trim();
-      result = result.filter(c => {
-        return (
-          (c.name && c.name.toLowerCase().includes(query)) ||
-          (c.one_liner && c.one_liner.toLowerCase().includes(query)) ||
-          (c.long_description && c.long_description.toLowerCase().includes(query)) ||
-          (c.industry && c.industry.toLowerCase().includes(query)) ||
-          (c.subindustry && c.subindustry.toLowerCase().includes(query)) ||
-          (c.all_locations && c.all_locations.toLowerCase().includes(query)) ||
-          (c.tags && c.tags.some(tag => tag.toLowerCase().includes(query)))
-        );
+  // Listen to auth changes to load/sync notes and favorites from backend
+  useEffect(() => {
+    const unsubscribe = subscribeToAuth(async (user) => {
+      if (user) {
+        // Fetch notes from Python backend
+        try {
+          const header = getAuthHeader();
+          const res = await fetch('/api/notes', {
+            headers: { 'Authorization': header }
+          });
+          if (res.ok) {
+            const backendNotes = await res.json();
+            setUserNotes(backendNotes);
+            
+            // Sync with local cache for fallback
+            Object.keys(backendNotes).forEach(slug => {
+              localStorage.setItem(`yc_note_${slug}`, backendNotes[slug]);
+            });
+          }
+        } catch (err) {
+          console.warn("Failed to load notes from backend:", err);
+        }
+      } else {
+        // Logged out, load notes from localStorage only
+        const notes = {};
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key.startsWith('yc_note_')) {
+            const slug = key.replace('yc_note_', '');
+            notes[slug] = localStorage.getItem(key);
+          }
+        }
+        setUserNotes(notes);
+      }
+      
+      // Reload favorites to trigger sync
+      getAllFavorites().then(favs => {
+        setFavoriteIds(new Set(favs.map(f => f.companyId)));
       });
+    });
+    
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash === '#app') {
+        setCurrentView('app');
+      } else {
+        setCurrentView('landing');
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Track company view and regions explored
+  useEffect(() => {
+    if (selectedCompany) {
+      // Track company viewed stat
+      trackUserAction('companies_viewed');
+
+      // Check if regions explored stats need incrementing
+      if (selectedCompany.regions) {
+        getSetting('regions_explored_set').then(async (setJson) => {
+          const regionsSet = new Set(setJson ? JSON.parse(setJson) : []);
+          const oldSize = regionsSet.size;
+          selectedCompany.regions.forEach(r => regionsSet.add(r));
+          if (regionsSet.size > oldSize) {
+            await setSetting('regions_explored_set', JSON.stringify(Array.from(regionsSet)));
+            await trackUserAction('regions_explored', regionsSet.size - oldSize);
+          }
+        });
+      }
+
+      // Dispatch inspected event
+      const event = new CustomEvent('yc_company_inspected', { detail: selectedCompany });
+      window.dispatchEvent(event);
+    }
+  }, [selectedCompany]);
+
+  const refreshAllData = () => {
+    // Reload local notes
+    const notes = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key.startsWith('yc_note_')) {
+        const slug = key.replace('yc_note_', '');
+        notes[slug] = localStorage.getItem(key);
+      }
+    }
+    setUserNotes(notes);
+
+    // Reload favorites
+    getAllFavorites().then(favs => {
+      setFavoriteIds(new Set(favs.map(f => f.companyId)));
+    });
+  };
+
+  // 2. Filter & Sort Logic — Now powered by Fuse.js fuzzy search
+  const searchResults = useMemo(() => {
+    if (!searchQuery || searchQuery.trim().length < 2) return null;
+    return fuzzySearch(companies, searchQuery);
+  }, [companies, searchQuery]);
+
+  // Search suggestions when no results found
+  const searchSuggestions = useMemo(() => {
+    if (!searchResults || searchResults.length > 0) return [];
+    return getSearchSuggestions(companies, searchQuery);
+  }, [companies, searchQuery, searchResults]);
+
+  const filteredCompanies = useMemo(() => {
+    let result;
+    let relevanceMap = null;
+
+    // Use fuzzy search results if a search is active
+    if (searchResults) {
+      result = searchResults.map(r => r.item);
+      // Build a relevance lookup for UI display
+      relevanceMap = new Map();
+      searchResults.forEach(r => {
+        relevanceMap.set(r.item.id, r.relevance);
+      });
+    } else {
+      result = [...companies];
     }
 
     // Filter dropdowns
@@ -163,45 +324,47 @@ export default function App() {
       });
     }
 
-    // Sorting logic
-    result.sort((a, b) => {
-      switch (sortType) {
-        case 'batch-newest':
-        case 'batch-oldest': {
-          const getBatchVal = (batchStr) => {
-            if (!batchStr) return 0;
-            const match = batchStr.match(/(\w+)\s+(\d+)/);
-            if (!match) return 0;
-            const season = match[1];
-            const year = parseInt(match[2]);
-            const seasonVal = season.toLowerCase().startsWith('w') ? 1 : 2;
-            return year * 10 + seasonVal;
-          };
-          const valA = getBatchVal(a.batch);
-          const valB = getBatchVal(b.batch);
-          return sortType === 'batch-newest' ? valB - valA : valA - valB;
+    // Sorting logic — skip sorting when fuzzy search is active (already ranked by relevance)
+    if (!searchResults) {
+      result.sort((a, b) => {
+        switch (sortType) {
+          case 'batch-newest':
+          case 'batch-oldest': {
+            const getBatchVal = (batchStr) => {
+              if (!batchStr) return 0;
+              const match = batchStr.match(/(\w+)\s+(\d+)/);
+              if (!match) return 0;
+              const season = match[1];
+              const year = parseInt(match[2]);
+              const seasonVal = season.toLowerCase().startsWith('w') ? 1 : 2;
+              return year * 10 + seasonVal;
+            };
+            const valA = getBatchVal(a.batch);
+            const valB = getBatchVal(b.batch);
+            return sortType === 'batch-newest' ? valB - valA : valA - valB;
+          }
+          case 'name-az':
+            return (a.name || '').localeCompare(b.name || '');
+          case 'name-za':
+            return (b.name || '').localeCompare(a.name || '');
+          case 'size-largest':
+            return (b.team_size || 0) - (a.team_size || 0);
+          case 'size-smallest': {
+            const sizeA = a.team_size === undefined ? 99999 : a.team_size;
+            const sizeB = b.team_size === undefined ? 99999 : b.team_size;
+            return sizeA - sizeB;
+          }
+          default:
+            return 0;
         }
-        case 'name-az':
-          return (a.name || '').localeCompare(b.name || '');
-        case 'name-za':
-          return (b.name || '').localeCompare(a.name || '');
-        case 'size-largest':
-          return (b.team_size || 0) - (a.team_size || 0);
-        case 'size-smallest': {
-          // Put companies with size 0 or undefined at the bottom
-          const sizeA = a.team_size === undefined ? 99999 : a.team_size;
-          const sizeB = b.team_size === undefined ? 99999 : b.team_size;
-          return sizeA - sizeB;
-        }
-        default:
-          return 0;
-      }
-    });
+      });
+    }
 
     return result;
   }, [
     companies,
     searchQuery,
+    searchResults,
     selectedBatch,
     selectedIndustry,
     selectedRegion,
@@ -228,7 +391,10 @@ export default function App() {
   ]);
 
   // 3. User Notes Management Hooks
-  const handleNoteChange = (slug, text) => {
+  const handleNoteChange = async (slug, text) => {
+    const isNewNote = !userNotes[slug] && text && text.trim().length > 0;
+    
+    // Update local state first (optimistic UI update)
     if (!text || text.trim() === '') {
       localStorage.removeItem(`yc_note_${slug}`);
       setUserNotes(prev => {
@@ -242,6 +408,34 @@ export default function App() {
         ...prev,
         [slug]: text
       }));
+    }
+
+    // Sync with backend if logged in
+    const header = getAuthHeader();
+    if (header) {
+      try {
+        if (!text || text.trim() === '') {
+          await fetch(`/api/notes/${slug}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': header }
+          });
+        } else {
+          await fetch('/api/notes', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': header
+            },
+            body: JSON.stringify({ companySlug: slug, noteText: text })
+          });
+        }
+      } catch (err) {
+        console.error("Failed to sync note to backend:", err);
+      }
+    }
+
+    if (isNewNote) {
+      trackUserAction('notes_written');
     }
   };
 
@@ -304,25 +498,34 @@ export default function App() {
 
   const selectedSlug = selectedCompany ? (selectedCompany.slug || selectedCompany.id.toString()) : null;
 
+  if (currentView === 'landing') {
+    return <LandingPage onStart={() => { window.location.hash = 'app'; }} />;
+  }
+
   return (
-    <div className="min-h-screen bg-obsidian-bg text-slate-200 terminal-scanlines flex flex-col antialiased pb-6">
+    <div className="min-h-screen bg-obsidian-bg text-slate-900 flex flex-col antialiased pb-6">
       
       {/* 1. Technical Boot Up Loading Screen */}
       {loading && (
         <div 
           ref={bootOverlayRef}
-          className="fixed inset-0 bg-obsidian-dark z-50 flex flex-col justify-center items-center p-6 font-mono-code"
+          className="fixed inset-0 bg-obsidian-bg z-50 flex flex-col justify-center items-center p-6 font-mono-code"
         >
-          <div className="w-full max-w-md bg-slate-950/80 border border-neon-emerald/30 p-5 rounded-lg shadow-[0_0_30px_rgba(0,255,157,0.05)]">
-            <div className="flex items-center space-x-2 border-b border-neon-emerald/20 pb-3 mb-4 text-neon-emerald">
-              <Terminal className="w-4 h-4" />
-              <span className="font-mono-tech tracking-wider uppercase text-xs">YC_IDEA_LAB_BOOT_SEQUENCE</span>
+          <div className="w-full max-w-md bg-white border-2.5 border-black p-5 rounded shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-black">
+            <div className="flex items-center space-x-2 border-b-2 border-black pb-3 mb-4 text-black">
+              <svg viewBox="0 0 100 100" className="w-5 h-5 shrink-0">
+                <rect x="10" y="10" width="80" height="80" fill="#ff7700" stroke="#000" strokeWidth="4" />
+                <rect x="5" y="5" width="80" height="80" fill="#00bce6" stroke="#000" strokeWidth="4" />
+                <text x="22" y="58" fontFamily="Share Tech Mono, monospace" fontSize="48" fontWeight="900" fill="#fff" stroke="#000" strokeWidth="2">Y</text>
+                <text x="46" y="58" fontFamily="Share Tech Mono, monospace" fontSize="48" fontWeight="900" fill="#000">D</text>
+              </svg>
+              <span className="font-mono-tech tracking-wider uppercase text-xs font-bold">YC_DECODE_BOOT_SEQUENCE</span>
             </div>
             
-            <div ref={bootTextRef} className="space-y-2 text-xs text-slate-400 min-h-[140px]">
+            <div ref={bootTextRef} className="space-y-2 text-xs text-slate-800 min-h-[140px]">
               {loadingProgress.map((line, idx) => (
                 <div key={idx} className="flex items-start">
-                  <span className="text-neon-emerald mr-2">&gt;</span>
+                  <span className="text-neon-orange font-bold mr-2">&gt;</span>
                   <span>{line}</span>
                 </div>
               ))}
@@ -343,26 +546,31 @@ export default function App() {
       >
         
         {/* Header Block */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0 border-b border-slate-900 pb-5">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0 border-b-2 border-black pb-5">
           <div className="flex items-center space-x-2.5 select-none">
-            <div className="w-8 h-8 rounded-lg bg-neon-cyan/10 border border-neon-cyan/40 flex items-center justify-center text-neon-cyan shadow-[0_0_10px_rgba(0,210,255,0.2)]">
-              <Database className="w-4 h-4" />
+            <div className="w-9 h-9 rounded border-2 border-black bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+              <svg viewBox="0 0 100 100" className="w-full h-full">
+                <rect x="10" y="10" width="80" height="80" fill="#ff7700" stroke="#000" strokeWidth="4" />
+                <rect x="5" y="5" width="80" height="80" fill="#00bce6" stroke="#000" strokeWidth="4" />
+                <text x="22" y="58" fontFamily="Share Tech Mono, monospace" fontSize="48" fontWeight="900" fill="#fff" stroke="#000" strokeWidth="2">Y</text>
+                <text x="46" y="58" fontFamily="Share Tech Mono, monospace" fontSize="48" fontWeight="900" fill="#000">D</text>
+              </svg>
             </div>
             <div>
-              <h1 className="font-mono-tech text-lg md:text-xl font-bold text-white tracking-widest leading-none flex items-center">
-                YC_IDEA_EXPLORER <span className="text-[10px] text-neon-cyan border border-neon-cyan/30 px-1 ml-2 rounded font-mono-code font-normal">v1.2</span>
+              <h1 className="font-mono-tech text-lg md:text-xl font-bold text-black tracking-widest leading-none flex items-center">
+                YC_DECODE <span className="text-[9px] bg-neon-orange border border-black px-1.5 py-0.5 ml-2 rounded font-mono-code font-bold text-white shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">v1.2</span>
               </h1>
-              <span className="text-[10px] font-mono-code text-slate-500 block mt-1 uppercase">
-                Browse ideas // study value propositions // build the future
+              <span className="text-[10px] font-mono-code text-slate-600 block mt-1 uppercase">
+                Decode patterns // study value propositions // build the future
               </span>
             </div>
           </div>
 
           {/* Backup Restore Buttons */}
-          <div className="flex items-center space-x-2 w-full md:w-auto justify-end">
+          <div className="flex items-center space-x-2.5 w-full md:w-auto justify-end">
             <button
               onClick={exportNotes}
-              className="flex items-center justify-center space-x-1.5 font-mono-tech text-[10px] bg-slate-950 border border-slate-800 hover:border-neon-cyan hover:text-neon-cyan hover:shadow-glow-cyan px-3 py-2 rounded-lg transition-all uppercase tracking-wide cursor-pointer text-slate-400"
+              className="brutal-btn flex items-center justify-center space-x-1.5 font-mono-tech text-[10px] px-3.5 py-2 hover:bg-neon-cyan"
               title="Backup your notes to a JSON file"
             >
               <Download className="w-3.5 h-3.5" />
@@ -371,12 +579,23 @@ export default function App() {
 
             <button
               onClick={() => fileInputRef.current.click()}
-              className="flex items-center justify-center space-x-1.5 font-mono-tech text-[10px] bg-slate-950 border border-slate-800 hover:border-neon-orange hover:text-neon-orange hover:shadow-glow-orange px-3 py-2 rounded-lg transition-all uppercase tracking-wide cursor-pointer text-slate-400"
+              className="brutal-btn flex items-center justify-center space-x-1.5 font-mono-tech text-[10px] px-3.5 py-2 hover:bg-neon-orange hover:text-white animate-pulse"
               title="Restore notes from a JSON backup file"
             >
               <Upload className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Import Takeaways</span>
             </button>
+
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="brutal-btn flex items-center justify-center space-x-1.5 font-mono-tech text-[10px] px-3.5 py-2 hover:bg-neon-cyan"
+              title="Open settings and configure API keys"
+            >
+              <Settings className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Settings</span>
+            </button>
+
+            <AuthBar onOpenProfile={() => setProfileOpen(true)} />
 
             <input
               type="file"
@@ -410,64 +629,180 @@ export default function App() {
           }}
         />
 
-        {/* Dashboard Panels Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start pb-1">
-          
-          {/* Col 1: Filters Sidebar (Tailwind width controls) */}
-          <aside className="lg:col-span-1 lg:sticky lg:top-4 h-auto">
-            <FiltersBar
-              allCompanies={companies}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              sortType={sortType}
-              setSortType={setSortType}
-              selectedBatch={selectedBatch}
-              setSelectedBatch={setSelectedBatch}
-              selectedIndustry={selectedIndustry}
-              setSelectedIndustry={setSelectedIndustry}
-              selectedRegion={selectedRegion}
-              setSelectedRegion={setSelectedRegion}
-              selectedStatus={selectedStatus}
-              setSelectedStatus={setSelectedStatus}
-              onlyHiring={onlyHiring}
-              setOnlyHiring={setOnlyHiring}
-              onlyTop={onlyTop}
-              setOnlyTop={setOnlyTop}
-              onlyHasNotes={onlyHasNotes}
-              setOnlyHasNotes={setOnlyHasNotes}
-              notesCount={Object.keys(userNotes).length}
-            />
-          </aside>
+        {/* Terminal Tabs Navigation */}
+        <div className="flex items-center space-x-3 border-b-2 border-black pb-2.5 select-none">
+          <button
+            onClick={() => setActiveTab('explorer')}
+            className={`font-mono-tech text-xs px-4 py-2 border-2 border-black cursor-pointer rounded transition-all uppercase tracking-wider ${
+              activeTab === 'explorer'
+                ? 'bg-neon-cyan text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] font-bold -translate-x-[1px] -translate-y-[1px]'
+                : 'bg-white text-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-[1px] hover:-translate-y-[1px] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[0px_0px_0px_0px_rgba(0,0,0,1)]'
+            }`}
+          >
+            🖥️ EXPLORER_CONSOLE
+          </button>
+          <button
+            onClick={() => setActiveTab('trends')}
+            className={`font-mono-tech text-xs px-4 py-2 border-2 border-black cursor-pointer rounded transition-all uppercase tracking-wider ${
+              activeTab === 'trends'
+                ? 'bg-neon-cyan text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] font-bold -translate-x-[1px] -translate-y-[1px]'
+                : 'bg-white text-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-[1px] hover:-translate-y-[1px] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[0px_0px_0px_0px_rgba(0,0,0,1)]'
+            }`}
+          >
+            📊 TRENDS_DASHBOARD
+          </button>
+          <button
+            onClick={() => setActiveTab('gaps')}
+            className={`font-mono-tech text-xs px-4 py-2 border-2 border-black cursor-pointer rounded transition-all uppercase tracking-wider ${
+              activeTab === 'gaps'
+                ? 'bg-neon-emerald text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] font-bold -translate-x-[1px] -translate-y-[1px]'
+                : 'bg-white text-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-[1px] hover:-translate-y-[1px] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[0px_0px_0px_0px_rgba(0,0,0,1)]'
+            }`}
+          >
+            🎯 GAP_FINDER
+          </button>
+          <button
+            onClick={() => setActiveTab('sandbox')}
+            className={`font-mono-tech text-xs px-4 py-2 border-2 border-black cursor-pointer rounded transition-all uppercase tracking-wider ${
+              activeTab === 'sandbox'
+                ? 'bg-neon-orange text-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] font-bold -translate-x-[1px] -translate-y-[1px]'
+                : 'bg-white text-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-[1px] hover:-translate-y-[1px] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[0px_0px_0px_0px_rgba(0,0,0,1)]'
+            }`}
+          >
+            🛠️ BUILDER_SANDBOX
+          </button>
+        </div>
 
-          {/* Col 2 & 3: Startup List Console */}
-          <main className="lg:col-span-2 flex flex-col h-[780px] overflow-hidden">
-            <CompanyGrid
-              companies={filteredCompanies}
-              selectedCompany={selectedCompany}
-              setSelectedCompany={setSelectedCompany}
-              userNotes={userNotes}
-              currentPage={currentPage}
-              setCurrentPage={setCurrentPage}
-            />
-          </main>
+        {/* Tab Content Panels */}
+        <div ref={tabContentRef} className="w-full">
+          {activeTab === 'explorer' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start pb-1">
+              
+              {/* Col 1: Filters Sidebar */}
+              <aside className="lg:col-span-1 lg:sticky lg:top-4 h-auto">
+                <FiltersBar
+                  allCompanies={companies}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  sortType={sortType}
+                  setSortType={setSortType}
+                  selectedBatch={selectedBatch}
+                  setSelectedBatch={setSelectedBatch}
+                  selectedIndustry={selectedIndustry}
+                  setSelectedIndustry={setSelectedIndustry}
+                  selectedRegion={selectedRegion}
+                  setSelectedRegion={setSelectedRegion}
+                  selectedStatus={selectedStatus}
+                  setSelectedStatus={setSelectedStatus}
+                  onlyHiring={onlyHiring}
+                  setOnlyHiring={setOnlyHiring}
+                  onlyTop={onlyTop}
+                  setOnlyTop={setOnlyTop}
+                  onlyHasNotes={onlyHasNotes}
+                  setOnlyHasNotes={setOnlyHasNotes}
+                  notesCount={Object.keys(userNotes).length}
+                />
+              </aside>
 
-          {/* Col 4: Startup Inspector Drawer Panel */}
-          <section className="lg:col-span-1 h-[780px] overflow-hidden lg:sticky lg:top-4">
-            <InspectorPanel
-              company={selectedCompany}
-              noteText={selectedSlug ? (userNotes[selectedSlug] || '') : ''}
-              onNoteChange={handleNoteChange}
-              onClose={() => setSelectedCompany(null)}
-            />
-          </section>
+              {/* Col 2 & 3: Startup List Console */}
+              <main className="lg:col-span-2 flex flex-col h-[780px] overflow-hidden space-y-4">
+                <DailyChallenge />
+                <div className="flex-grow overflow-hidden">
+                  <CompanyGrid
+                    companies={filteredCompanies}
+                    selectedCompany={selectedCompany}
+                    setSelectedCompany={setSelectedCompany}
+                    userNotes={userNotes}
+                    currentPage={currentPage}
+                    setCurrentPage={setCurrentPage}
+                    searchQuery={searchQuery}
+                    searchSuggestions={searchSuggestions}
+                    setSearchQuery={setSearchQuery}
+                    favoriteIds={favoriteIds}
+                    setFavoriteIds={setFavoriteIds}
+                  />
+                </div>
+              </main>
 
+              {/* Col 4: Startup Inspector Drawer Panel */}
+              <section className="lg:col-span-1 h-[780px] overflow-hidden lg:sticky lg:top-4">
+                <InspectorPanel
+                  company={selectedCompany}
+                  noteText={selectedSlug ? (userNotes[selectedSlug] || '') : ''}
+                  onNoteChange={handleNoteChange}
+                  onClose={() => setSelectedCompany(null)}
+                  allCompanies={companies}
+                  onSelectCompany={setSelectedCompany}
+                  onOpenSettings={() => setSettingsOpen(true)}
+                />
+              </section>
+
+            </div>
+          ) : activeTab === 'trends' ? (
+            <div className="w-full space-y-6">
+              <TrendsDashboard companies={companies} />
+              <ComparatorPanel allCompanies={companies} />
+            </div>
+          ) : activeTab === 'gaps' ? (
+            <div className="w-full">
+              <IdeaGapFinder
+                companies={companies}
+                onFilterApply={({ industry, region }) => {
+                  setActiveTab('explorer');
+                  setSelectedIndustry(industry || 'All');
+                  setSelectedRegion(region || 'All');
+                }}
+              />
+            </div>
+          ) : activeTab === 'sandbox' ? (
+            <div className="w-full">
+              <SandboxTab
+                allCompanies={companies}
+                onSelectCompany={(c) => {
+                  setSelectedCompany(c);
+                  setActiveTab('explorer');
+                }}
+                onOpenSettings={() => setSettingsOpen(true)}
+              />
+            </div>
+          ) : null}
         </div>
       </div>
       
       {/* Footer copyright */}
-      <footer className="mt-auto border-t border-slate-950 py-4 text-center font-mono-code text-[10px] text-slate-600 bg-obsidian-dark select-none">
+      <footer className="mt-auto border-t-2 border-black py-4 text-center font-mono-code text-[10px] text-slate-800 bg-obsidian-dark select-none">
         <span>CONSOLE RUNNING // LOADED 6,179 YC COMPANIES FROM LOCAL PACK // BUILT FOR BUILDERS TO STUDY IDEAS</span>
       </footer>
+
+      {/* Favorites Drawer */}
+      <FavoritesBar
+        allCompanies={companies}
+        onSelectCompany={(c) => {
+          setSelectedCompany(c);
+          setActiveTab('explorer');
+          setFavDrawerOpen(false);
+        }}
+        favoriteIds={favoriteIds}
+        setFavoriteIds={setFavoriteIds}
+        isOpen={favDrawerOpen}
+        setIsOpen={setFavDrawerOpen}
+      />
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onDataReset={refreshAllData}
+      />
+
+      {/* Profile Modal */}
+      <PublicProfile
+        isOpen={profileOpen}
+        onClose={() => setProfileOpen(false)}
+      />
+
+      {/* Achievement Unlocked Notification Toasts */}
+      <AchievementToast />
     </div>
   );
 }
