@@ -23,6 +23,7 @@ import { subscribeToAuth, getAuthHeader } from './lib/firebase';
 import LandingPage from './components/LandingPage';
 import PublicTeardownView from './components/PublicTeardownView';
 import StreakCounter from './components/StreakCounter';
+import Leaderboard from './components/Leaderboard';
 
 gsap.registerPlugin(useGSAP);
 
@@ -691,6 +692,16 @@ export default function App() {
           >
             🛠️ BUILDER_SANDBOX
           </button>
+          <button
+            onClick={() => setActiveTab('leaderboard')}
+            className={`font-mono-tech text-xs px-4 py-2 border-2 border-black cursor-pointer rounded transition-all uppercase tracking-wider ${
+              activeTab === 'leaderboard'
+                ? 'bg-neon-magenta text-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] font-bold -translate-x-[1px] -translate-y-[1px]'
+                : 'bg-white text-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-[1px] hover:-translate-y-[1px] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[0px_0px_0px_0px_rgba(0,0,0,1)]'
+            }`}
+          >
+            🏆 ARENA_LEADERBOARD
+          </button>
         </div>
 
         {/* Tab Content Panels */}
@@ -784,6 +795,10 @@ export default function App() {
                 }}
                 onOpenSettings={() => setSettingsOpen(true)}
               />
+            </div>
+          ) : activeTab === 'leaderboard' ? (
+            <div className="w-full">
+              <Leaderboard />
             </div>
           ) : null}
         </div>

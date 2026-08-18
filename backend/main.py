@@ -675,3 +675,77 @@ def check_in_streak(uid: str = Depends(get_current_user_uid), db: Session = Depe
     db.commit()
     db.refresh(streak)
     return {"streak": streak.streak_count, "lastCheckIn": streak.last_check_in}
+
+
+# --- Leaderboard ---
+@app.get("/api/leaderboard/weekly")
+def get_weekly_leaderboard(uid: str = Depends(get_current_user_uid), db: Session = Depends(get_db)):
+    # 1. Fetch real users and their scores
+    users = db.query(User).all()
+    leaderboard = []
+    
+    for u in users:
+        stats = db.query(UsageStat).filter(UsageStat.user_uid == u.uid).all()
+        stats_val = sum(s.stat_value for s in stats)
+        
+        streak = db.query(Streak).filter(Streak.user_uid == u.uid).first()
+        streak_count = streak.streak_count if streak else 0
+        
+        badges = db.query(Achievement).filter(Achievement.user_uid == u.uid).all()
+        badges_count = len(badges)
+        
+        score = (stats_val * 5) + (streak_count * 15) + (badges_count * 50)
+        
+        leaderboard.append({
+            "uid": u.uid,
+            "displayName": u.display_name or "Anonymous Builder",
+            "photoURL": u.photo_url,
+            "score": score,
+            "streak": streak_count,
+            "badgesCount": badges_count,
+            "isCurrentUser": u.uid == uid
+        })
+        
+    # 2. Add simulated builders for robust visual demo
+    mock_builders = [
+        {"uid": "mock1", "displayName": "ByteCoder_0x", "photoURL": "", "score": 850, "streak": 12, "badgesCount": 6, "isCurrentUser": False},
+        {"uid": "mock2", "displayName": "SaaS_Founder_AI", "photoURL": "", "score": 690, "streak": 8, "badgesCount": 4, "isCurrentUser": False},
+        {"uid": "mock3", "displayName": "CS_Student_MIT", "photoURL": "", "score": 520, "streak": 5, "badgesCount": 3, "isCurrentUser": False},
+        {"uid": "mock4", "displayName": "IndieHackerPro", "photoURL": "", "score": 410, "streak": 4, "badgesCount": 3, "isCurrentUser": False},
+        {"uid": "mock5", "displayName": "YCCurator", "photoURL": "", "score": 380, "streak": 6, "badgesCount": 2, "isCurrentUser": False},
+        {"uid": "mock6", "displayName": "StartupVibe", "photoURL": "", "score": 290, "streak": 3, "badgesCount": 2, "isCurrentUser": False},
+        {"uid": "mock7", "displayName": "AlphaBuilder", "photoURL": "", "score": 150, "streak": 2, "badgesCount": 1, "isCurrentUser": False}
+    ]
+    
+    # Check if current user is already in the list
+    has_current = any(item["isCurrentUser"] for item in leaderboard)
+    if not has_current:
+        # Get active user info
+        active_user = db.query(User).filter(User.uid == uid).first()
+        active_streak = db.query(Streak).filter(Streak.user_uid == uid).first()
+        active_stats = db.query(UsageStat).filter(UsageStat.user_uid == uid).all()
+        active_badges = db.query(Achievement).filter(Achievement.user_uid == uid).all()
+        
+        u_stats_val = sum(s.stat_value for s in active_stats)
+        u_streak_count = active_streak.streak_count if active_streak else 0
+        u_badges_count = len(active_badges)
+        u_score = (u_stats_val * 5) + (u_streak_count * 15) + (u_badges_count * 50)
+        
+        leaderboard.append({
+            "uid": uid,
+            "displayName": (active_user.display_name if active_user and active_user.display_name else "You (Builder)"),
+            "photoURL": (active_user.photo_url if active_user else ""),
+            "score": u_score,
+            "streak": u_streak_count,
+            "badgesCount": u_badges_count,
+            "isCurrentUser": True
+        })
+        
+    for mock in mock_builders:
+        if not any(item["displayName"] == mock["displayName"] for item in leaderboard):
+            leaderboard.append(mock)
+            
+    # Sort leaderboard by score descending
+    leaderboard.sort(key=lambda x: x["score"], reverse=True)
+    
+    return leaderboard[:10]
