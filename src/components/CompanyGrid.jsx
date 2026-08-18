@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import CompanyCard from './CompanyCard';
-import { ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, AlertTriangle, Search, Sparkles } from 'lucide-react';
 
 gsap.registerPlugin(useGSAP);
 
@@ -12,7 +12,12 @@ export default function CompanyGrid({
   setSelectedCompany,
   userNotes,
   currentPage,
-  setCurrentPage
+  setCurrentPage,
+  searchQuery,
+  searchSuggestions,
+  setSearchQuery,
+  favoriteIds,
+  setFavoriteIds
 }) {
   const gridRef = useRef(null);
   const itemsPerPage = 30;
@@ -98,24 +103,68 @@ export default function CompanyGrid({
   return (
     <div className="space-y-4 flex flex-col h-full overflow-hidden" id="grid-anchor">
       {/* Search statistics header */}
-      <div className="flex justify-between items-center text-xs font-mono-code text-slate-500 border-b border-slate-900 pb-3 flex-shrink-0">
+      <div className="flex justify-between items-center text-xs font-mono-code text-slate-700 border-b-2 border-black pb-3 flex-shrink-0 font-bold">
         <span>
-          SHOWING <span className="text-white">{totalItems > 0 ? startIndex + 1 : 0}-{endIndex}</span> OF <span className="text-white">{totalItems.toLocaleString()}</span> MATCHED
+          SHOWING <span className="text-black font-extrabold">{totalItems > 0 ? startIndex + 1 : 0}-{endIndex}</span> OF <span className="text-black font-extrabold">{totalItems.toLocaleString()}</span> MATCHED
         </span>
         <span>
-          PAGE <span className="text-white">{currentPage}</span> / {totalPages}
+          PAGE <span className="text-black font-extrabold">{currentPage}</span> / {totalPages}
         </span>
       </div>
 
+      {/* Search mode indicator */}
+      {searchQuery && searchQuery.trim().length >= 2 && totalItems > 0 && (
+        <div className="flex items-center space-x-2 bg-neon-cyan/10 border-2 border-black rounded p-2.5 flex-shrink-0 shadow-[2px_2px_0px_0px_#000000]">
+          <Sparkles className="w-3.5 h-3.5 text-black animate-pulse" />
+          <span className="font-mono-code text-[10px] text-black font-bold">
+            FUZZY_SEARCH: Results ranked by relevance for "{searchQuery}"
+          </span>
+        </div>
+      )}
+
       {totalItems === 0 ? (
-        <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-slate-800 rounded-2xl bg-slate-950/20 my-8">
-          <AlertTriangle className="w-10 h-10 text-neon-orange mb-3 opacity-60" />
-          <h4 className="font-mono-tech text-base font-bold text-white uppercase tracking-wider mb-2">
+        <div className="brutal-card border-dashed p-12 text-center my-8 bg-white flex flex-col items-center justify-center">
+          <AlertTriangle className="w-10 h-10 text-neon-orange mb-3 opacity-90" />
+          <h4 className="font-mono-tech text-base font-extrabold text-black uppercase tracking-wider mb-2">
             NO_STARTUPS_FOUND
           </h4>
-          <p className="text-xs text-slate-500 max-w-sm leading-relaxed">
+          <p className="text-xs text-slate-700 max-w-sm leading-relaxed font-medium">
             Your query didn't match any YC records in our database. Try adjusting your search term or relaxing selected controllers.
           </p>
+
+          {/* Did you mean? suggestions */}
+          {searchSuggestions && searchSuggestions.length > 0 && (
+            <div className="mt-5 w-full max-w-sm">
+              <span className="font-mono-tech text-[10px] text-slate-700 font-bold uppercase tracking-wider block mb-2.5">
+                🔍 Did you mean?
+              </span>
+              <div className="space-y-2">
+                {searchSuggestions.map((s) => (
+                  <button
+                    key={s.item.id}
+                    onClick={() => {
+                      setSearchQuery(s.item.name);
+                      setSelectedCompany(s.item);
+                    }}
+                    className="w-full brutal-card p-3 flex items-center space-x-3 cursor-pointer hover:bg-neon-cyan/10 transition-all text-left"
+                  >
+                    <Search className="w-3.5 h-3.5 text-black shrink-0" />
+                    <div className="flex-grow min-w-0">
+                      <span className="font-mono-tech text-[11px] font-extrabold text-black block truncate">
+                        {s.item.name}
+                      </span>
+                      <span className="font-mono-code text-[9px] text-slate-600 block truncate">
+                        {s.item.one_liner}
+                      </span>
+                    </div>
+                    <span className="font-mono-code text-[8px] font-bold bg-neon-emerald border border-black px-1.5 py-0.5 rounded shadow-[1px_1px_0px_0px_#000000] shrink-0">
+                      {s.relevance}%
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <>
@@ -137,6 +186,8 @@ export default function CompanyGrid({
                       hasNote={hasNote}
                       isSelected={isSelected}
                       onClick={() => setSelectedCompany(c)}
+                      favoriteIds={favoriteIds}
+                      setFavoriteIds={setFavoriteIds}
                     />
                   </div>
                 );
@@ -144,16 +195,16 @@ export default function CompanyGrid({
             </div>
           </div>
 
-          {/* Cyberpunk Paginator */}
+          {/* Cyberpunk Paginator -> Neo-Brutalist Paginator */}
           {totalPages > 1 && (
-            <div className="flex justify-center items-center space-x-1.5 pt-4 border-t border-slate-900 flex-shrink-0 select-none">
+            <div className="flex justify-center items-center space-x-2 pt-4 border-t-2 border-black flex-shrink-0 select-none">
               {/* Prev button */}
               <button
                 disabled={currentPage === 1}
                 onClick={() => handlePageChange(currentPage - 1)}
-                className="w-8 h-8 rounded border border-slate-800 flex items-center justify-center text-slate-400 hover:text-neon-cyan hover:border-neon-cyan disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:border-slate-800 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                className="brutal-btn w-8 h-8 flex items-center justify-center text-black shadow-[1.5px_1.5px_0px_0px_#000000] hover:shadow-[3px_3px_0px_0px_#000000] hover:-translate-x-[0.5px] hover:-translate-y-[0.5px]"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-4 h-4 stroke-[3px]" />
               </button>
 
               {/* Number buttons */}
@@ -162,7 +213,7 @@ export default function CompanyGrid({
                   return (
                     <span
                       key={`dots-${idx}`}
-                      className="w-8 h-8 flex items-center justify-center font-mono-code text-xs text-slate-600"
+                      className="w-8 h-8 flex items-center justify-center font-mono-code text-xs text-slate-700 font-bold"
                     >
                       ...
                     </span>
@@ -174,10 +225,10 @@ export default function CompanyGrid({
                   <button
                     key={`page-${p}`}
                     onClick={() => handlePageChange(p)}
-                    className={`w-8 h-8 rounded font-mono-code text-xs transition-all cursor-pointer border
+                    className={`brutal-btn w-8 h-8 flex items-center justify-center font-mono-code text-xs transition-all cursor-pointer border
                       ${isActive
-                        ? 'bg-neon-cyan/10 border-neon-cyan text-neon-cyan shadow-glow-cyan'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-600'
+                        ? 'bg-neon-cyan text-black font-extrabold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] -translate-x-[0.5px] -translate-y-[0.5px]'
+                        : 'bg-white text-black hover:bg-slate-50 shadow-[1.5px_1.5px_0px_0px_#000000] hover:shadow-[3px_3px_0px_0px_#000000] hover:-translate-x-[0.5px] hover:-translate-y-[0.5px]'
                       }`}
                   >
                     {p}
@@ -189,9 +240,9 @@ export default function CompanyGrid({
               <button
                 disabled={currentPage === totalPages}
                 onClick={() => handlePageChange(currentPage + 1)}
-                className="w-8 h-8 rounded border border-slate-800 flex items-center justify-center text-slate-400 hover:text-neon-cyan hover:border-neon-cyan disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:border-slate-800 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                className="brutal-btn w-8 h-8 flex items-center justify-center text-black shadow-[1.5px_1.5px_0px_0px_#000000] hover:shadow-[3px_3px_0px_0px_#000000] hover:-translate-x-[0.5px] hover:-translate-y-[0.5px]"
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4 stroke-[3px]" />
               </button>
             </div>
           )}
